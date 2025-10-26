@@ -1,0 +1,40 @@
+{
+  "name": "watchdog-learning-assistant",
+  "displayName": "Watchdog Learning Assistant",
+  "description": "AI-powered real-time learning hints for Python development",
+  "version": "0.1.0",
+  "publisher": "local",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Education", "Programming Languages"],
+  "activationEvents": ["onLanguage:python"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Watchdog",
+      "properties": {
+        "watchdog.backendPort": {
+          "type": "number",
+          "default": 5555,
+          "description": "Port for Python backend server"
+        },
+        "watchdog.enableDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline hint diagnostics"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

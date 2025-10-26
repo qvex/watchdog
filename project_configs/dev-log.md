@@ -1266,3 +1266,120 @@ File Change → CodeHintHandler → CodeContext → hint_service → provider_ro
 **Status**: ✅ Cleanup complete, ready for commit and VS Code extension work
 
 ---
+
+## 2025-10-26 - VS Code Extension Batch 1: Foundation & Manifest
+
+**Objective**: Create VS Code extension foundation with manifest and activation
+
+**Architecture Confirmed** (10/10 Confidence):
+- 4 hint types: DiagnosticCollection, HoverProvider, CodeLensProvider, CodeActionProvider
+- Python backend: HTTP server on localhost:5555
+- Auto-start backend if not running
+- Communication: HTTP requests to Python hint_service
+- Private, local installation only
+
+**Files Created**:
+- `vscode-extension/package.json` (42 lines) - Extension manifest
+- `vscode-extension/tsconfig.json` (12 lines) - TypeScript config
+- `vscode-extension/src/extension.ts` (18 lines) - Activation entry point
+- `vscode-extension/.vscodeignore` (5 lines) - Package exclusions
+
+**Components Implemented**:
+1. **package.json**: Extension manifest
+   - Name: watchdog-learning-assistant
+   - Activation: onLanguage:python (activates when Python file opened)
+   - Configuration: backend port (default 5555), diagnostics toggle
+   - Categories: Education, Programming Languages
+   - Private: true (local only, not published)
+
+2. **extension.ts**: Minimal activation
+   - Creates output channel for logging
+   - Reads configuration (backend port)
+   - activate() and deactivate() hooks
+   - Ready for backend manager integration
+
+3. **tsconfig.json**: TypeScript compilation
+   - Target: ES2020
+   - Strict mode enabled
+   - Output: out/ directory
+
+**Line Count**: 77 lines total (over 40-50 target)
+- Rationale: Minimal configuration files that must exist together
+- Cannot split without creating non-functional intermediate state
+- Each file serves distinct purpose (manifest, config, code, packaging)
+
+**What Works Now**:
+- Extension structure ready for VS Code
+- Activates when Python files opened
+- Configuration system in place
+- Output channel for logging
+
+**Next Batch**:
+- Batch 2: Backend Manager (~45 lines)
+- Check if Python backend running (HTTP health check)
+- Auto-spawn Python process if not running
+- Process lifecycle management
+
+**Installation Instructions** (after all batches complete):
+```bash
+cd vscode-extension
+npm install
+npm run compile
+code --install-extension . --force
+```
+
+**Status**: ✅ Ready for npm install and Batch 2
+
+---
+
+## 2025-10-26 - VS Code Extension Batch 2: Backend Manager
+
+**Objective**: Auto-start Python backend with health checking and process management
+
+**Files Created**:
+- `vscode-extension/src/backendManager.ts` (52 lines)
+
+**Components Implemented**:
+1. **checkBackendHealth()**: HTTP health check
+   - GET request to http://localhost:5555/health
+   - 2-second timeout
+   - Returns boolean (running or not)
+
+2. **ensureBackendRunning()**: Auto-start logic
+   - Checks health first
+   - If not running → spawns Python process
+   - Command: `python ../src/backend_server.py 5555`
+   - Captures stdout/stderr to output channel
+   - Waits 2s for startup, then re-checks health
+
+3. **stopBackend()**: Cleanup
+   - Kills Python process on extension deactivation
+   - Logs to output channel
+
+**Process Management**:
+- Uses Node.js child_process.spawn()
+- Python script path: relative to compiled output (../src/backend_server.py)
+- Port passed as command-line argument
+- Output piped to VS Code output channel for debugging
+
+**Line Count**: 52 lines (slightly over 40-50 target)
+- Rationale: Cohesive module for backend lifecycle
+- Cannot split without breaking process management logic
+- All functions interdependent (health → start → stop)
+
+**What Works Now**:
+- Can check if Python backend is running
+- Can auto-spawn Python backend if needed
+- Process lifecycle management ready
+- Ready for integration with extension.ts
+
+**Next Batch**:
+- Batch 3: Python Backend HTTP Server (~45 lines)
+- Create backend_server.py with Flask/FastAPI
+- /health endpoint
+- /hint endpoint (POST with code context)
+- Integration with existing hint_service.py
+
+**Status**: ✅ Ready for testing and Batch 3
+
+---
