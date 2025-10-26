@@ -9,6 +9,10 @@ from src.code_analyzer import CodeAnalyzer
 from src.hint_engine import HintEngine
 from src.state_manager import StateManager
 from src.vscode_integration import VSCodeIntegration
+from src.feedback_coordinator import FeedbackCoordinator
+from src.graph_builder import ASTGraphBuilder
+from src.test_runner_impl import PytestRunner, SimpleTestDetector
+from src.proficiency_calculator import SimpleProfileCalculator
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,7 +36,7 @@ if sys.platform == 'win32':
         sys.stderr.reconfigure(encoding='utf-8')
 
 
-class PythonLearningBot:
+class Watchdog:
     def __init__(self, file_path: str):
         try:
             self.file_path = file_path
@@ -42,9 +46,19 @@ class PythonLearningBot:
             self.ui = VSCodeIntegration()
             self.watcher: Optional[PythonFileWatcher] = None
 
-            logger.info("PythonLearningBot initialized for: %s", file_path)
+            self.graph_builder = ASTGraphBuilder()
+            self.test_runner = PytestRunner()
+            self.test_detector = SimpleTestDetector()
+            self.profile_calculator = SimpleProfileCalculator()
+            self.coordinator = FeedbackCoordinator(
+                self.graph_builder,
+                self.test_runner,
+                self.profile_calculator
+            )
+
+            logger.info("Watchdog initialized for: %s", file_path)
         except Exception as e:
-            logger.error("Failed to initialize PythonLearningBot: %s", str(e), exc_info=True)
+            logger.error("Failed to initialize Watchdog: %s", str(e), exc_info=True)
             raise
 
     def on_code_change(self, event: CodeChangeEvent) -> None:
@@ -55,21 +69,52 @@ class PythonLearningBot:
                 logger.info("Code deletion detected")
                 print("\nDetected code deletion - analyzing...")
 
-                context = self.analyzer.analyze_deletion(
+                code_context = self.analyzer.analyze_deletion(
                     event.before,
                     event.after
                 )
 
-                time_stuck = self.state.get_time_stuck()
-                current_level = self.state.get_current_hint_level()
+                enhanced_result = self.coordinator.build_enhanced_context(
+                    event.after,
+                    code_context,
+                    None
+                )
 
-                if self.hint_engine.should_increase_hint_level(time_stuck, current_level):
-                    current_level = min(current_level + 1, 4)
-                    logger.debug("Increasing hint level to: %d", current_level)
+                if enhanced_result.value:
+                    enhanced_ctx = enhanced_result.value
 
-                hint = self.hint_engine.generate_hint(context, current_level, time_stuck)
-                self.state.record_hint(hint)
-                self.ui.display_hint(hint)
+                    test_file = self.test_detector.get_test_file(self.file_path)
+                    if test_file:
+                        test_enriched = self.coordinator.enrich_with_tests(
+                            enhanced_ctx,
+                            test_file
+                        )
+                        if test_enriched.value:
+                            enhanced_ctx = test_enriched.value
+
+                    time_stuck = self.state.get_time_stuck()
+                    current_level = self.state.get_current_hint_level()
+
+                    if self.hint_engine.should_increase_hint_level(time_stuck, current_level):
+                        current_level = min(current_level + 1, 4)
+                        logger.debug("Increasing hint level to: %d", current_level)
+
+                    adaptive_level = self.coordinator.calculate_adaptive_hint_level(
+                        enhanced_ctx,
+                        current_level
+                    )
+
+                    hint = self.hint_engine.generate_hint(
+                        code_context,
+                        adaptive_level,
+                        time_stuck
+                    )
+                    self.state.record_hint(hint)
+                    self.ui.display_hint(hint)
+
+                    if self.coordinator.should_show_test_feedback(enhanced_ctx):
+                        if enhanced_ctx.test_result:
+                            print(f"\nTest Results: {enhanced_ctx.test_result.failed} failed")
         except Exception as e:
             logger.error("Error handling code change: %s", str(e), exc_info=True)
             print(f"Error processing code change: {e}")
@@ -198,8 +243,8 @@ def main() -> None:
             sys.exit(1)
 
         try:
-            bot = PythonLearningBot(str(file_path))
-            bot.start()
+            watchdog = Watchdog(str(file_path))
+            watchdog.start()
         except KeyboardInterrupt:
             logger.info("Application terminated by user")
             sys.exit(0)
