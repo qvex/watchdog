@@ -1,25 +1,36 @@
+import logging
+import random
 from typing import List, Optional, Dict
 from dataclasses import dataclass
-import random
+
+logger = logging.getLogger(__name__)
+
+MAX_HINT_LEVEL = 4
+HINT_PROGRESSION_TIME_SECONDS = 30
 
 
 @dataclass
 class Hint:
-    """A progressive hint with level and content."""
     level: int  # 1=conceptual, 2=structural, 3=syntax, 4=code
     content: str
     best_practice: Optional[str] = None
 
 
 class HintEngine:
-    """Generates progressive hints based on code context."""
-
     def __init__(self):
-        self.hint_templates = self._load_hint_templates()
-        self.best_practices = self._load_best_practices()
+        try:
+            self.hint_templates = self._load_hint_templates()
+            self.best_practices = self._load_best_practices()
+            logger.info(
+                "HintEngine initialized with %d pattern types",
+                len(self.hint_templates)
+            )
+        except Exception as e:
+            logger.error("Failed to initialize HintEngine: %s", str(e), exc_info=True)
+            self.hint_templates = {}
+            self.best_practices = {}
 
-    def _load_hint_templates(self) -> Dict:
-        """Load hint templates for different patterns."""
+    def _load_hint_templates(self) -> Dict[str, Dict[int, List[str]]]:
         return {
             'loops': {
                 1: [
@@ -75,8 +86,7 @@ class HintEngine:
             }
         }
 
-    def _load_best_practices(self) -> Dict:
-        """Load Python best practices for different patterns."""
+    def _load_best_practices(self) -> Dict[str, List[str]]:
         return {
             'loops': [
                 "Use `enumerate()` when you need both index and value",
@@ -98,41 +108,104 @@ class HintEngine:
 
     def generate_hint(
         self,
-        context,  # CodeContext from code_analyzer
+        context,
         current_hint_level: int = 1,
         time_elapsed: float = 0
     ) -> Hint:
-        """Generate a progressive hint based on context and current level."""
+        try:
+            if not isinstance(current_hint_level, int):
+                logger.warning(
+                    "Invalid hint level type: %s, defaulting to 1",
+                    type(current_hint_level).__name__
+                )
+                current_hint_level = 1
 
-        pattern_type = context.missing_element
+            current_hint_level = max(1, min(current_hint_level, MAX_HINT_LEVEL))
 
-        # Get appropriate hint template
-        templates = self.hint_templates.get(pattern_type, {})
-        level_hints = templates.get(current_hint_level, [
-            f"Think about adding {pattern_type} here..."
-        ])
+            pattern_type = getattr(context, 'missing_element', 'unknown')
+            logger.debug(
+                "Generating hint: pattern=%s, level=%d",
+                pattern_type,
+                current_hint_level
+            )
 
-        hint_content = random.choice(level_hints)
+            templates = self.hint_templates.get(pattern_type, {})
+            level_hints = templates.get(
+                current_hint_level,
+                self._get_fallback_hints(pattern_type, current_hint_level)
+            )
 
-        # Add best practice if at higher levels
-        best_practice = None
-        if current_hint_level >= 2:
-            practices = self.best_practices.get(pattern_type, [])
-            if practices:
-                best_practice = random.choice(practices)
+            if level_hints:
+                hint_content = random.choice(level_hints)
+            else:
+                hint_content = self._get_generic_hint(pattern_type, current_hint_level)
 
-        return Hint(
-            level=current_hint_level,
-            content=hint_content,
-            best_practice=best_practice
+            best_practice = None
+            if current_hint_level >= 2:
+                practices = self.best_practices.get(pattern_type, [])
+                if practices:
+                    best_practice = random.choice(practices)
+
+            logger.debug("Generated hint: level=%d, has_practice=%s", current_hint_level, best_practice is not None)
+
+            return Hint(
+                level=current_hint_level,
+                content=hint_content,
+                best_practice=best_practice
+            )
+        except Exception as e:
+            logger.error("Error generating hint: %s", str(e), exc_info=True)
+            return Hint(
+                level=current_hint_level,
+                content="Consider what code element might be needed here.",
+                best_practice=None
+            )
+
+    def _get_fallback_hints(self, pattern_type: str, level: int) -> List[str]:
+        level_descriptors = {
+            1: f"Think about adding {pattern_type} here...",
+            2: f"You'll need a {pattern_type} structure. What components are required?",
+            3: f"Consider the syntax for {pattern_type}...",
+            4: f"Here's an example structure for {pattern_type}..."
+        }
+
+        hint = level_descriptors.get(level, f"Consider using {pattern_type}")
+        return [hint]
+
+    def _get_generic_hint(self, pattern_type: str, level: int) -> str:
+        logger.warning(
+            "Using generic hint for pattern=%s, level=%d",
+            pattern_type,
+            level
         )
+        return f"Think about adding {pattern_type} to solve this problem."
 
     def should_increase_hint_level(
         self,
         time_stuck: float,
         current_level: int
     ) -> bool:
-        """Determine if hint level should increase."""
-        # Increase hint level after 30 seconds per level
-        threshold = 30 * current_level
-        return time_stuck >= threshold and current_level < 4
+        try:
+            if not isinstance(time_stuck, (int, float)) or time_stuck < 0:
+                logger.warning("Invalid time_stuck: %s", time_stuck)
+                return False
+
+            if not isinstance(current_level, int) or current_level < 1:
+                logger.warning("Invalid current_level: %s", current_level)
+                return False
+
+            threshold = HINT_PROGRESSION_TIME_SECONDS * current_level
+            should_increase = time_stuck >= threshold and current_level < MAX_HINT_LEVEL
+
+            logger.debug(
+                "Hint progression check: time_stuck=%.1fs, level=%d, threshold=%.1fs, increase=%s",
+                time_stuck,
+                current_level,
+                threshold,
+                should_increase
+            )
+
+            return should_increase
+        except Exception as e:
+            logger.error("Error in should_increase_hint_level: %s", str(e))
+            return False

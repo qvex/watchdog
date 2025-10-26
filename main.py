@@ -1,14 +1,28 @@
 import sys
 import argparse
 import time
+import logging
 from pathlib import Path
+from typing import Optional
 from src.file_watcher import PythonFileWatcher, CodeChangeEvent
 from src.code_analyzer import CodeAnalyzer
 from src.hint_engine import HintEngine
 from src.state_manager import StateManager
 from src.vscode_integration import VSCodeIntegration
 
-# Fix Windows console encoding for emoji support
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('watchdog.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+SUPPORTED_EXTENSIONS = {'.py'}
+MAX_FILE_SIZE_MB = 10
+
 if sys.platform == 'win32':
     import os
     os.environ['PYTHONIOENCODING'] = 'utf-8'
@@ -19,80 +33,187 @@ if sys.platform == 'win32':
 
 
 class PythonLearningBot:
-    """Main application coordinator."""
-
     def __init__(self, file_path: str):
-        self.file_path = file_path
-        self.analyzer = CodeAnalyzer()
-        self.hint_engine = HintEngine()
-        self.state = StateManager()
-        self.ui = VSCodeIntegration()
-        self.watcher = None
+        try:
+            self.file_path = file_path
+            self.analyzer = CodeAnalyzer()
+            self.hint_engine = HintEngine()
+            self.state = StateManager()
+            self.ui = VSCodeIntegration()
+            self.watcher: Optional[PythonFileWatcher] = None
 
-    def on_code_change(self, event: CodeChangeEvent):
-        """Handle code changes and provide hints."""
+            logger.info("PythonLearningBot initialized for: %s", file_path)
+        except Exception as e:
+            logger.error("Failed to initialize PythonLearningBot: %s", str(e), exc_info=True)
+            raise
 
-        # Reset timer when user makes changes
-        self.state.reset_timer()
+    def on_code_change(self, event: CodeChangeEvent) -> None:
+        try:
+            self.state.reset_timer()
 
-        # If deletion detected, analyze and provide hint
-        if event.deleted_lines or event.deleted_functions:
-            print("\nDetected code deletion - analyzing...")
+            if event.deleted_lines or event.deleted_functions:
+                logger.info("Code deletion detected")
+                print("\nDetected code deletion - analyzing...")
 
-            context = self.analyzer.analyze_deletion(
-                event.before,
-                event.after
+                context = self.analyzer.analyze_deletion(
+                    event.before,
+                    event.after
+                )
+
+                time_stuck = self.state.get_time_stuck()
+                current_level = self.state.get_current_hint_level()
+
+                if self.hint_engine.should_increase_hint_level(time_stuck, current_level):
+                    current_level = min(current_level + 1, 4)
+                    logger.debug("Increasing hint level to: %d", current_level)
+
+                hint = self.hint_engine.generate_hint(context, current_level, time_stuck)
+                self.state.record_hint(hint)
+                self.ui.display_hint(hint)
+        except Exception as e:
+            logger.error("Error handling code change: %s", str(e), exc_info=True)
+            print(f"Error processing code change: {e}")
+            print("Continuing to watch for changes...")
+
+    def start(self) -> None:
+        try:
+            self.ui.console.print(
+                "\nWatchdog is now running in the background\n",
+                style="bold green"
+            )
+            self.ui.console.print(f"Watching: {self.file_path}\n")
+            self.ui.console.print("Delete code to receive progressive hints\n")
+
+            self.state.start_session(self.file_path)
+
+            self.watcher = PythonFileWatcher(
+                self.file_path,
+                self.on_code_change
             )
 
-            # Check if we should increase hint level
-            time_stuck = self.state.get_time_stuck()
-            current_level = self.state.get_current_hint_level()
+            observer = self.watcher.start()
+            logger.info("Watchdog started successfully")
 
-            if self.hint_engine.should_increase_hint_level(time_stuck, current_level):
-                current_level = min(current_level + 1, 4)
+            try:
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                logger.info("Keyboard interrupt received, shutting down...")
+                observer.stop()
+                self.state.end_session()
+                print("\nLearning session ended. Keep practicing!")
+            except Exception as e:
+                logger.error("Error in main event loop: %s", str(e), exc_info=True)
+                observer.stop()
+                self.state.end_session()
+                raise
 
-            # Generate and display hint
-            hint = self.hint_engine.generate_hint(context, current_level, time_stuck)
-            self.state.record_hint(hint)
-            self.ui.display_hint(hint)
+            observer.join()
+        except Exception as e:
+            logger.error("Error starting learning bot: %s", str(e), exc_info=True)
+            raise
 
-    def start(self):
-        """Start the learning bot."""
-        self.ui.console.print("\nWatchdog is now running in the background\n", style="bold green")
-        self.ui.console.print(f"Watching: {self.file_path}\n")
-        self.ui.console.print("Delete code to receive progressive hints\n")
 
-        self.state.start_session(self.file_path)
+def validate_file_path(file_path: str) -> Path:
+    try:
+        path = Path(file_path).resolve()
 
-        self.watcher = PythonFileWatcher(
-            self.file_path,
-            self.on_code_change
-        )
+        if not path.exists():
+            raise FileNotFoundError(
+                f"File not found: {file_path}\n"
+                f"Please provide a valid path to a Python file."
+            )
 
-        observer = self.watcher.start()
+        if not path.is_file():
+            raise ValueError(
+                f"Path is not a file: {file_path}\n"
+                f"Please provide a path to a Python file, not a directory."
+            )
+
+        if path.suffix not in SUPPORTED_EXTENSIONS:
+            raise ValueError(
+                f"Unsupported file type: {path.suffix}\n"
+                f"Watchdog only supports Python files (.py)."
+            )
 
         try:
-            while True:
-                time.sleep(1)
+            with open(path, 'r', encoding='utf-8') as f:
+                f.read(1)
+        except PermissionError:
+            raise PermissionError(
+                f"Permission denied: {file_path}\n"
+                f"Cannot read file. Please check file permissions."
+            )
+        except UnicodeDecodeError:
+            raise ValueError(
+                f"File encoding error: {file_path}\n"
+                f"File must be valid UTF-8 encoded Python source."
+            )
+
+        file_size_mb = path.stat().st_size / (1024 * 1024)
+        if file_size_mb > MAX_FILE_SIZE_MB:
+            logger.warning(
+                "Large file detected: %.2f MB (max recommended: %d MB)",
+                file_size_mb,
+                MAX_FILE_SIZE_MB
+            )
+            print(
+                f"Warning: File is {file_size_mb:.2f} MB. "
+                f"Large files may impact performance."
+            )
+
+        logger.info("File validation passed: %s", path)
+        return path
+    except (FileNotFoundError, ValueError, PermissionError) as e:
+        logger.error("File validation failed: %s", str(e))
+        raise
+    except Exception as e:
+        logger.error("Unexpected error during file validation: %s", str(e), exc_info=True)
+        raise ValueError(f"Error validating file: {e}")
+
+
+def main() -> None:
+    try:
+        parser = argparse.ArgumentParser(
+            prog='watchdog',
+            description='Watchdog - Interactive Python Learning Assistant',
+            epilog='Delete code to receive progressive hints while learning Python.'
+        )
+        parser.add_argument(
+            'file',
+            help='Path to Python file to watch'
+        )
+        parser.add_argument(
+            '--version',
+            action='version',
+            version='Watchdog 0.1.0'
+        )
+
+        args = parser.parse_args()
+
+        try:
+            file_path = validate_file_path(args.file)
+        except (FileNotFoundError, ValueError, PermissionError) as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+
+        try:
+            bot = PythonLearningBot(str(file_path))
+            bot.start()
         except KeyboardInterrupt:
-            observer.stop()
-            self.state.end_session()
-            print("\nLearning session ended. Keep practicing!")
+            logger.info("Application terminated by user")
+            sys.exit(0)
+        except Exception as e:
+            logger.error("Fatal error: %s", str(e), exc_info=True)
+            print(f"\nFatal error: {e}")
+            print("Check watchdog.log for details.")
+            sys.exit(1)
 
-        observer.join()
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Python Learning Bot')
-    parser.add_argument('file', help='Python file to watch')
-    args = parser.parse_args()
-
-    if not Path(args.file).exists():
-        print(f"Error: File '{args.file}' not found")
+    except Exception as e:
+        logger.error("Unexpected error in main: %s", str(e), exc_info=True)
+        print(f"\nUnexpected error: {e}")
+        print("Check watchdog.log for details.")
         sys.exit(1)
-
-    bot = PythonLearningBot(args.file)
-    bot.start()
 
 
 if __name__ == "__main__":
