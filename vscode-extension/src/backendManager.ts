@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as http from 'http';
+import * as path from 'path';
 import { spawn, ChildProcess } from 'child_process';
 
 let backendProcess: ChildProcess | null = null;
@@ -25,11 +26,16 @@ export async function ensureBackendRunning(port: number, outputChannel: vscode.O
     }
 
     outputChannel.appendLine('Starting Python backend...');
-    const pythonPath = 'python';
-    const scriptPath = '../src/backend_server.py';
+    const extensionRoot = path.join(__dirname, '..', '..');
+    const pythonPath = path.join(extensionRoot, 'venv', 'Scripts', 'python.exe');
+    const scriptPath = path.join(extensionRoot, 'src', 'backend_server.py');
+
+    outputChannel.appendLine(`Python path: ${pythonPath}`);
+    outputChannel.appendLine(`Script path: ${scriptPath}`);
+    outputChannel.appendLine(`Working directory: ${extensionRoot}`);
 
     backendProcess = spawn(pythonPath, [scriptPath, port.toString()], {
-        cwd: __dirname
+        cwd: extensionRoot
     });
 
     backendProcess.stdout?.on('data', (data) => {

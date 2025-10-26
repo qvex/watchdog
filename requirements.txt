@@ -7,3 +7,5 @@ rich
 pytest
 pytest-cov
 pytest-mock
+flask
+requests
