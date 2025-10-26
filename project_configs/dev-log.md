@@ -796,3 +796,27 @@ Following comprehensive research on educational programming tools and intelligen
 **Status**: ✅ Ready for testing and commit
 
 ---
+
+## 2025-10-26 - Micro-Fix: Environment Variable Loading
+
+**Issue Found**: OpenAI API key not loading from .env file
+- Root cause: Python doesn't automatically load .env files
+- os.environ.get() only reads already-loaded environment variables
+
+**Fix Applied**:
+- Added dotenv import and load_dotenv() call in load_api_key()
+- Loads .env from project root (../../.env relative to openai_service.py)
+- Uses python-dotenv (already installed in venv)
+
+**Files Modified**:
+- `src/llm/openai_service.py` (added 3 lines: import Path, import load_dotenv, load_dotenv call)
+
+**Engineering Compliance**:
+- ✅ Zero unicode maintained
+- ✅ Type signatures unchanged
+- ✅ No complexity increase
+- ✅ Lines: 51 total (still within acceptable range)
+
+**Status**: ✅ Ready for re-testing
+
+---

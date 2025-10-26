@@ -3,6 +3,8 @@ import json
 import urllib.request
 import urllib.error
 import os
+from pathlib import Path
+from dotenv import load_dotenv
 from src.effects import Result, Success, Failure, ErrorType
 
 
@@ -10,6 +12,8 @@ OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 def load_api_key() -> Optional[str]:
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    load_dotenv(env_path)
     return os.environ.get("OPENAI_API_KEY")
 
 
