@@ -1,0 +1,9 @@
+watchdog
+gitpython
+openai
+anthropic
+python-dotenv
+rich
+pytest
+pytest-cov
+pytest-mock
