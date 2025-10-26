@@ -39,3 +39,4 @@ venv.bak/
 *~
 /src/__pycache__
 /tests/__pycache__
+/src/__pycache__
