@@ -714,3 +714,85 @@ Following comprehensive research on educational programming tools and intelligen
 **Status**: ✅ Ready for testing and commit
 
 ---
+
+## 2025-10-26 - Micro-Fix: Ollama Timeout Adjustment
+
+**Issue Found**: Initial test timed out after 30 seconds
+- Model loaded successfully but generation exceeded timeout
+- Root cause: Cold start (loading 6.7B model into GPU memory) takes 20-40s
+
+**Fix Applied**:
+- Increased generation timeout from 30s → 60s in ollama_client.py:41
+- Added user feedback in test script about expected wait time
+
+**Files Modified**:
+- `src/llm/ollama_client.py` (1 line: timeout=60)
+- `test_ollama_client.py` (1 line: added cold start message)
+
+**Rationale**:
+- First-time model loading into GPU memory is one-time cost
+- Subsequent generations will be much faster (0.5-1s cached in GPU)
+- 60s accommodates worst-case cold start scenario
+
+**Status**: ✅ Ready for re-testing
+
+---
+
+## 2025-10-26 - Batch 4 Verification Complete
+
+**Testing Results**: Ollama client working correctly after timeout fix
+- Model Detection: ✅ deepseek-coder:6.7b found
+- Hint Generation: ✅ Successful (loaded in ~20-30s)
+- Output Quality: ✅ Accurate Python list comprehension definition
+
+**Batch 4 Status**: ✅ COMPLETE and VERIFIED
+
+---
+
+## 2025-10-26 - Batch 5: OpenAI Service Layer
+
+**Objective**: Implement OpenAI API client for cloud LLM fallback
+
+**Files Created**:
+- `src/llm/openai_service.py` (48 lines)
+
+**Components Implemented**:
+1. **OPENAI_BASE_URL**: Base endpoint for OpenAI API v1
+2. **load_api_key()**: Loads API key from OPENAI_API_KEY environment variable
+3. **generate_hint()**: Generates hints via /chat/completions endpoint
+   - Parameters: api_key, model, prompt, max_tokens, temperature
+   - Returns Result[str, ErrorType]
+   - Uses chat completion format (messages array)
+   - 30-second timeout (no cold start, faster than Ollama)
+   - Handles HTTPError with status codes and error body
+
+**API Integration**:
+- Uses urllib.request (standard library, no external dependencies)
+- OpenAI Chat Completions API format
+- Bearer token authentication
+- Proper error handling with Result types
+- Detailed error messages including status codes
+
+**Engineering Compliance**:
+- ✅ Zero unicode (no comments/docstrings)
+- ✅ Result types for all error paths
+- ✅ Type annotations complete
+- ✅ Functions ≤20 lines each
+- ✅ Complexity ≤7 per function
+- ✅ Lines: 48 (within 40-50 target)
+
+**What Works Now**:
+- Can generate hints using OpenAI gpt-4o-mini
+- API key loaded from environment
+- Full error handling with status codes
+- Consistent interface with Ollama client
+
+**Next Batch**:
+- Batch 6: Provider Router (~45 lines)
+- Smart routing logic (Ollama → OpenAI fallback)
+- Unified interface for both providers
+- Configuration-aware provider selection
+
+**Status**: ✅ Ready for testing and commit
+
+---

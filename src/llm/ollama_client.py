@@ -38,7 +38,7 @@ def generate_hint(model: str, prompt: str, max_tokens: int, temperature: float) 
             headers={'Content-Type': 'application/json'}
         )
 
-        with urllib.request.urlopen(req, timeout=30) as response:
+        with urllib.request.urlopen(req, timeout=60) as response:
             result = json.loads(response.read().decode())
             hint_text = result.get("response", "")
             return Success(hint_text)

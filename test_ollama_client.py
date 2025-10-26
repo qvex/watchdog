@@ -14,6 +14,7 @@ def main():
             print(f"  Model found: YES")
 
             print(f"\nGenerating test hint...")
+            print(f"  (First generation may take 20-40s to load model into GPU...)")
             prompt = "What is a Python list comprehension? Answer in one sentence."
 
             hint_result = generate_hint(model, prompt, max_tokens=100, temperature=0.3)
