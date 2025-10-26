@@ -13,7 +13,7 @@ DEBOUNCE_TIME_SECONDS = 0.5
 DEFAULT_ENCODING = 'utf-8'
 
 
-class CodeChangeEvent:
+class CodeChangeEvent: #what does this class do
     def __init__(self, file_path: str, before: str, after: str):
         self.file_path = file_path
         self.before = before

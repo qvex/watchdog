@@ -21,26 +21,13 @@ class WatchdogConfig:
 
 
 def get_default_config() -> WatchdogConfig:
-    hw_info = get_hardware_info()
-    provider = recommend_provider(hw_info)
-
-    if provider == "ollama":
-        llm = LLMConfig(
-            provider="ollama",
-            model="deepseek-coder:6.7b",
-            api_key=None,
-            max_tokens=1000,
-            temperature=0.3
-        )
-    else:
-        llm = LLMConfig(
-            provider="openai",
-            model="gpt-4o-mini",
-            api_key=None,
-            max_tokens=1000,
-            temperature=0.3
-        )
-
+    llm = LLMConfig(
+        provider="openai",
+        model="gpt-4o-mini",
+        api_key=None,
+        max_tokens=1000,
+        temperature=0.3
+    )
     return WatchdogConfig(llm=llm, auto_detected=True)
 
 
