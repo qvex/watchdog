@@ -30,6 +30,175 @@
 - "It should be implemented as..."
 - Any statement containing uncertainty markers without follow-up verification
 
+## Simplicity-First Principle
+
+**ABSOLUTE REQUIREMENT: Always start with the simplest solution that could possibly work**
+
+### The Simplicity Mandate
+
+**FIRST APPROACH ALWAYS**: The simplest, most straightforward solution
+**SECOND APPROACH**: Only if first approach proven insufficient
+**NEVER**: Jump to complex solutions without trying simple ones first
+
+### Anti-Over-Engineering Protocol
+
+**BEFORE implementing ANY solution, ask:**
+1. **"What is the simplest way to solve this?"** - Start here
+2. **"Can I solve this with existing code?"** - Reuse before creating
+3. **"Do I really need this abstraction?"** - Question every layer
+4. **"Am I adding complexity for future needs that may never come?"** - YAGNI principle
+5. **"Would a junior developer understand this immediately?"** - Clarity test
+
+### Red Flags of Over-Engineering
+
+**STOP IMMEDIATELY if you're about to:**
+- Add abstraction layers "for flexibility" without concrete need
+- Create interfaces/protocols for single implementation
+- Implement design patterns because "it's best practice"
+- Add configuration for things that never change
+- Build frameworks instead of solving the problem
+- Create generic solutions for specific problems
+
+### Simplicity Checklist
+
+**Before implementing, verify:**
+- [ ] This is the simplest solution I can think of
+- [ ] I've tried solving it with existing code first
+- [ ] Every abstraction has concrete, current justification
+- [ ] A junior developer could understand this in 5 minutes
+- [ ] I'm not building for hypothetical future requirements
+
+**If ANY checkbox fails: Simplify first, then implement**
+
+### Examples of Simplicity vs Over-Engineering
+
+**OVER-ENGINEERED (WRONG)**:
+```python
+class AbstractCacheFactory(Protocol):
+    def create_cache(self) -> CacheInterface: ...
+
+class CacheInterface(Protocol):
+    async def get(self, key: str) -> Optional[Any]: ...
+    async def set(self, key: str, value: Any) -> None: ...
+
+class LRUCacheStrategy(CacheInterface):
+    pass
+
+class CacheManager:
+    def __init__(self, factory: AbstractCacheFactory): ...
+```
+
+**SIMPLE (CORRECT)**:
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=100)
+def get_completion(context_hash: str) -> str:
+    return generate_completion(context_hash)
+```
+
+**Why Simple Wins**: 20 lines → 4 lines, same functionality, immediately clear
+
+## Impact Analysis Protocol
+
+**CRITICAL: Analyze system-wide impact BEFORE making ANY change**
+
+### The Mandatory Impact Question
+
+**BEFORE every implementation, bug fix, or feature addition, ask:**
+
+**"Will this change affect other parts of the codebase?"**
+
+- **If YES**: STOP and analyze all impacts first
+- **If MAYBE**: Treat as YES and analyze
+- **If NO**: Verify with dependency tracing
+
+### Impact Analysis Requirements
+
+**For EVERY change, trace:**
+1. **Direct Dependencies**: What code calls this?
+2. **Indirect Dependencies**: What depends on the callers?
+3. **Data Flow**: What data structures does this modify?
+4. **Side Effects**: What state changes does this cause?
+5. **Error Paths**: How do errors propagate?
+
+### Prohibited Narrow-Scope Actions
+
+**NEVER:**
+1. **Fix bugs in isolation** without checking if fix breaks callers
+2. **Add features** without analyzing impact on existing features
+3. **Refactor code** without verifying all usage points
+4. **Change interfaces** without updating all implementations
+5. **Modify data structures** without checking all accessors
+
+### Impact Analysis Checklist
+
+**MANDATORY before ANY code change:**
+- [ ] I've identified all functions/classes that call this code
+- [ ] I've checked if this change affects those callers
+- [ ] I've traced data flow in and out of this change
+- [ ] I've considered error propagation paths
+- [ ] I've verified this won't break existing functionality
+- [ ] If this is a bug fix, I've checked it won't create new bugs elsewhere
+- [ ] If this is a feature, I've analyzed interactions with existing features
+
+**If ANY checkbox uncertain: STOP and investigate thoroughly**
+
+### Dependency Tracing Tools
+
+**Use these tools to trace impact:**
+```bash
+grep -r "function_name" .           # Find all usages
+grep -r "class ClassName" .         # Find all references
+git log -p -- file.py               # See change history
+git blame file.py                    # See who/when/why
+```
+
+### Example: Bug Fix with Impact Analysis
+
+**WRONG APPROACH (Narrow Scope)**:
+```python
+def parse_context(text: str) -> Dict:
+    return json.loads(text)  # Bug: crashes on invalid JSON
+```
+
+**Bug Fix WITHOUT Impact Analysis**:
+```python
+def parse_context(text: str) -> Dict:
+    try:
+        return json.loads(text)
+    except:
+        return {}  # "Fixed" - but breaks callers expecting data!
+```
+
+**CORRECT APPROACH (Impact Analysis)**:
+
+Step 1 - Find all callers:
+```bash
+grep -r "parse_context" .
+→ Found in: hint_service.py, cache.py, validator.py
+```
+
+Step 2 - Check what callers expect:
+```python
+context = parse_context(text)
+if context.get("type") == "help":  # Expects real data or None
+```
+
+Step 3 - Fix with proper impact handling:
+```python
+def parse_context(text: str) -> Result[Dict, ParseError]:
+    try:
+        data = json.loads(text)
+        return Success(data)
+    except json.JSONDecodeError as e:
+        return Failure(ParseError(str(e)))
+
+# Update all 3 callers to handle Result type properly
+```
+
+**Impact Analysis Prevented**: Breaking 3 different modules with "quick fix"
+
 ## CRITICAL: File Reading Protocol
 
 **ABSOLUTE REQUIREMENT: When user asks "read this file" - NEVER just scan, ALWAYS use Grep**
@@ -142,6 +311,10 @@ Before EVERY response, verify:
 - [ ] Is this response accurate or just fast?
 - [ ] Should I investigate further before responding?
 - [ ] Have I checked token usage and warned user if >150,000?
+- [ ] **Is this the SIMPLEST solution possible?**
+- [ ] **Will this change affect other parts of the code?**
+- [ ] **Have I analyzed all impacts if answer is YES?**
+- [ ] **Am I over-engineering this?**
 
 **IF ANY CHECKBOX FAILS: INVESTIGATE BEFORE RESPONDING**
 
@@ -1063,11 +1236,75 @@ class CacheAlignedArray(Generic[T]):
 
 **NEVER write more than 40-50 lines of code in a single response**
 
+**NEVER generate complete files in one response**
+
+**ALWAYS generate FUNCTIONAL batches - not just size-based batches**
+
 **WHY THIS IS CRITICAL:**
 1. **Context Loss Prevention**: Large code blocks cause AI context degradation
 2. **Bug Prevention**: Small batches catch errors before they compound
 3. **Review Efficiency**: User can review and test each increment
 4. **Commit Hygiene**: Clean, focused commits that are easy to revert
+5. **Bug Tracking**: Functional batches make it easy to identify which change caused issues
+
+### Functional Batch Requirements
+
+**Each batch MUST be:**
+- **Complete**: A working unit that can be tested independently
+- **Functional**: Provides a specific, testable capability
+- **Isolated**: Can be understood without reading other batches
+- **Focused**: Does ONE thing well
+
+**WRONG (Size-based batch)**:
+```python
+# Batch 1: Lines 1-50 of cache.py (incomplete class)
+class Cache:
+    def __init__(self):
+        self.data = {}
+
+    def get(self, key):
+        # ... 40 more lines but class incomplete
+```
+
+**CORRECT (Functional batch)**:
+```python
+# Batch 1: Complete cache key generation (functional unit)
+@dataclass(frozen=True)
+class CacheKey:
+    file_hash: str
+    context_hash: str
+    line_number: int
+
+def generate_cache_key(file_path: str, context: str, line: int) -> CacheKey:
+    file_hash = hashlib.sha256(file_path.encode()).hexdigest()[:16]
+    context_hash = hashlib.sha256(context.encode()).hexdigest()[:16]
+    return CacheKey(file_hash, context_hash, line)
+```
+
+### Complete File Generation Prohibition
+
+**ABSOLUTELY PROHIBITED:**
+- Generating entire files in one response
+- Writing 100+ lines regardless of "it's all related"
+- Creating full classes with all methods at once
+- Implementing complete modules without breaks
+
+**WHY THIS IS CATASTROPHIC:**
+- Impossible to track which part has bugs
+- Can't test incrementally
+- Context loss guarantees errors
+- User overwhelmed trying to review
+- Git commits become meaningless
+- Debugging becomes nightmare
+
+**CORRECT APPROACH:**
+Break complete files into functional batches:
+1. Batch 1: Data structures and types (40 lines)
+2. Batch 2: Core functionality (45 lines)
+3. Batch 3: Helper utilities (40 lines)
+4. Batch 4: Integration points (35 lines)
+
+**Each batch is tested before proceeding to next**
 
 ### Incremental Development Workflow
 
@@ -1158,4 +1395,4 @@ class CacheAlignedArray(Generic[T]):
 ---
 
 **SESSION START INSTRUCTION:**
-State: "Following unified engineering standards. All implementations require Part 1 (process verification), Part 2 (advanced Python patterns for code efficiency), and Part 3 (formal correctness proofs). Pre-implementation validation protocol mandatory. CRITICAL: Maximum 40-50 lines per code batch, update dev-log after each batch, wait for user green flag before proceeding."
+State: "Following unified engineering standards. All implementations require Part 1 (process verification + simplicity-first + impact analysis), Part 2 (advanced Python patterns for code efficiency), and Part 3 (formal correctness proofs). Pre-implementation validation protocol mandatory. CRITICAL: Simplicity-first always, analyze impact before ANY change, maximum 40-50 lines per FUNCTIONAL batch, NEVER complete files, update dev-log after each batch, wait for user green flag before proceeding."

@@ -3,198 +3,160 @@
 ## System Architecture Overview
 
 ### Complete System Architecture
-- **outline.md**: The primary reference document containing complete implementation code for all system components. This file serves as the single source of truth for the system's architecture and implementation details.
+- **VS Code Extension** (vscode-extension/src/): TypeScript-based inline completion provider
+- **Python Backend** (src/llm/): LLM-powered hint generation service
+- **Optional File Monitor** (watch_and_hint.py): Standalone terminal-based code monitoring
 
 ### Core Architecture Pattern
-**Primary Pattern**: Observer pattern with file system event handlers
-**Code Structure**: Modular component design with clear separation of concerns
-**State Management**: In-memory session state with dataclass-based structures
-**Event Flow**: File change → Analysis → Hint generation → Terminal display
+**Primary Pattern**: VS Code inline completion provider with HTTP backend
+**Code Structure**: Extension (TypeScript) + Backend service (Python) architecture
+**State Management**: Stateless completion requests with full-file context
+**Event Flow**: User types → Extension requests hint → Backend analyzes → Ghost text displayed
 
 ## Current Development Status
 
 ### Implementation Phase
-**Current Version**: v0.1.0 (Template Complete)
-**Status**: All core components implemented from outline.md specification
-**Next Phase**: Testing and validation with real practice files
+**Current Version**: v0.2.0 (VS Code Extension Complete)
+**Status**: Inline completion provider operational with Python LLM backend
+**Next Phase**: Enhanced LLM features and multi-language support
 
 ### Core Components Status
 
-#### 1. File Watching System (COMPLETE)
-**File**: src/file_watcher.py
-**Key Classes**:
-- `CodeChangeEvent`: Dataclass capturing before/after states with deleted content detection
-- `PythonFileWatcher`: FileSystemEventHandler with debounce and change callbacks
+#### 1. VS Code Extension (COMPLETE)
+**Location**: vscode-extension/src/
+**Key Files**:
+- `extension.ts`: Main extension lifecycle and activation
+- `inlineCompletionProvider.ts`: Provides ghost text suggestions
+- `backendManager.ts`: Manages Python backend process
+- `httpClient.ts`: HTTP communication with backend
 
 **Features Implemented**:
-- Observer pattern for file monitoring
-- Debounce mechanism (0.5s) prevents rapid-fire events
-- Deleted line extraction using difflib.unified_diff
-- Deleted function detection using AST comparison
-- Callback-based event notification
+- Inline completion provider registration for Python files
+- Full-file context analysis for suggestions
+- Help comment detection (`# help ...`)
+- Smart context filtering (only suggest when incomplete)
+- Automatic backend startup and lifecycle management
 
 **Performance Characteristics**:
-- File change detection: <500ms from save to event trigger
-- AST parsing overhead: ~50-100ms for typical files
-- Memory per watcher: ~5-10MB
+- Completion suggestion latency: <500ms
+- Backend communication: HTTP REST API
+- Memory footprint: ~30-50MB for extension
 
-#### 2. Code Analysis Engine (COMPLETE)
-**File**: src/code_analyzer.py
-**Key Classes**:
-- `CodeContext`: Dataclass with surrounding_code, missing_element, expected_pattern, difficulty_level
-- `CodeAnalyzer`: Pattern detection and difficulty estimation
-
-**Features Implemented**:
-- AST-based code structure analysis
-- Pattern detection for: loops, conditionals, functions, classes, comprehensions, context managers, error handling
-- Difficulty estimation (1-5 scale) based on deleted pattern type
-- Graceful SyntaxError handling for incomplete code
-- Function signature extraction
-
-**Supported Patterns**:
-```python
-{
-    'loops': ['for', 'while'],
-    'conditionals': ['if', 'elif', 'else'],
-    'functions': ['def'],
-    'classes': ['class'],
-    'comprehensions': ['[', 'for', 'in'],
-    'context_managers': ['with'],
-    'error_handling': ['try', 'except', 'finally']
-}
-```
-
-**Difficulty Mapping**:
-- loops: 2/5
-- conditionals: 2/5
-- functions: 3/5
-- comprehensions: 4/5
-- classes: 4/5
-- error_handling: 3/5
-- unknown: 1/5
-
-#### 3. Progressive Hint Engine (COMPLETE)
-**File**: src/hint_engine.py
-**Key Classes**:
-- `Hint`: Dataclass with level (1-4), content, best_practice
-- `HintEngine`: Template-based hint generation with progression logic
-
-**4-Level Hint System**:
-1. **Level 1 - Conceptual**: General thinking prompts ("Think about repeating an action...")
-2. **Level 2 - Structural**: Component identification ("You'll need: function definition, parameters...")
-3. **Level 3 - Syntax**: Syntax templates ("Syntax: `for item in collection:`")
-4. **Level 4 - Code**: Complete code examples with comments
-
-**Best Practice Integration**:
-- Loops: enumerate() for index+value, list comprehensions, avoid modifying while iterating
-- Functions: Descriptive names, single responsibility, docstrings, type hints
-- Conditionals: elif vs multiple if, ternary operators, early returns
-
-**Hint Progression**:
-- Time threshold: 30 seconds per level
-- Maximum level: 4 (complete solution)
-- Random selection from template pool for variety
-
-#### 4. State Management (COMPLETE)
-**File**: src/state_manager.py
-**Key Classes**:
-- `LearningSession`: Dataclass tracking file_path, started_at, current_hint_level, hints_shown, time_on_current_task, task_completed
-- `StateManager`: Session lifecycle and progress tracking
+#### 2. Python LLM Backend (COMPLETE)
+**Location**: src/llm/hint_service.py
+**Key Components**:
+- `CodeContext`: Dataclass capturing code context for hint generation
+- `generate_code_hint()`: Main function for LLM-powered hint generation
 
 **Features Implemented**:
-- Session initialization with timestamp
-- Hint recording with history tracking
-- Time tracking for hint progression decisions
-- Session completion marking
-- Session history for analytics
-- Timer reset on code updates
+- Full-file code context analysis
+- LLM-powered code completion and suggestions
+- Support for help comments and learning hints
+- Context-aware suggestion generation
+- Pattern-based vs. solution-based hint modes
 
-#### 5. VS Code Terminal Integration (COMPLETE)
-**File**: src/vscode_integration.py
-**Key Classes**:
-- `VSCodeIntegration`: Rich console output with styled panels
+**Hint Generation Modes**:
+- `help_comment`: Generates code from natural language request
+- `learning_hint`: Provides next logical code step with patterns
+- `context_completion`: Context-aware code suggestions
 
-**Features Implemented**:
-- Hint display with level-based emoji indicators:
-  - Level 1: 🤔 (thinking)
-  - Level 2: 💡 (light bulb)
-  - Level 3: ✏️ (pencil)
-  - Level 4: 📝 (notebook)
-- Markdown rendering for code examples
-- Styled panels with borders
-- Progress tracking display
-- Encouragement message rotation
+**Backend Characteristics**:
+- Response time: <300ms for typical requests
+- Uses Effects pattern for error handling (Success/Failure)
+- Stateless request processing
 
-#### 6. Main Application Coordinator (COMPLETE)
-**File**: main.py
-**Key Classes**:
-- `PythonLearningBot`: Main coordinator orchestrating all components
+#### 3. Optional File Monitor (COMPLETE)
+**File**: watch_and_hint.py
+**Key Components**:
+- `CodeHintHandler`: FileSystemEventHandler for file change detection
+- File watching with watchdog library for terminal-based hints
 
 **Features Implemented**:
-- Component initialization and wiring
-- Code change event handling
-- Hint level progression logic (30s per level)
-- Session lifecycle management
-- CLI argument parsing (file path)
-- Graceful shutdown on Ctrl+C
+- Watches Python files in current directory
+- Detects file modifications and extracts last 50 lines
+- Sends context to hint service for analysis
+- Displays hints in terminal output
+- Code normalization to avoid duplicate processing
+
+**Use Case**:
+- Standalone terminal-based code monitoring
+- Alternative to VS Code extension for non-IDE users
+- Testing and development of hint generation
+- Real-time terminal feedback during coding
 
 ## Technical Stack Specifications
 
 ### Core Technologies
-**Runtime**: Python 3.8+ (type hints, dataclasses, AST features)
-**File Monitoring**: watchdog 3.0.0 (Observer pattern)
-**Terminal UI**: rich 13.7.0 (styled console output)
-**Code Analysis**: Built-in ast module (Abstract Syntax Trees)
-**Diff Analysis**: Built-in difflib module (unified diff)
+**Extension Runtime**: TypeScript with VS Code Extension API
+**Backend Runtime**: Python 3.8+ (type hints, dataclasses, Effects pattern)
+**LLM Integration**: Configurable LLM providers for hint generation
+**File Monitoring**: watchdog 3.0.0 (for optional terminal monitor)
+**HTTP Communication**: Node.js fetch API for extension-backend communication
 
-### Future Integrations (Planned)
-**LLM Services**: OpenAI 1.3.0, Anthropic 0.7.0
-**Environment Management**: python-dotenv 1.0.0
-**Version Control Integration**: GitPython 3.1.40
+### Key Libraries
+**VS Code Extension**: @types/vscode ^1.85.0, TypeScript ^5.3.0
+**Python Backend**: dataclasses, typing, effects pattern implementation
+**Optional Components**: rich 13.7.0 (terminal output), watchdog 3.0.0 (file monitoring)
 
 ## Development Environment
 
 ### Required Dependencies
+
+**VS Code Extension**:
+```json
+{
+  "@types/vscode": "^1.85.0",
+  "@types/node": "^20.x",
+  "typescript": "^5.3.0"
+}
 ```
-watchdog==3.0.0      # File system event monitoring
-rich==13.7.0         # Terminal formatting and panels
-gitpython==3.1.40    # Version control integration (future)
-openai==1.3.0        # LLM integration (future)
-anthropic==0.7.0     # LLM integration (future)
-python-dotenv==1.0.0 # Environment variable management (future)
+
+**Python Backend**:
+```
+dataclasses (built-in)
+typing (built-in)
+watchdog==3.0.0      # For optional file monitor
+rich==13.7.0         # For terminal output (optional)
 ```
 
 ### Environment Setup
-```bash
-# Virtual environment creation
-python -m venv venv
 
+**Extension Development**:
+```bash
+cd vscode-extension
+npm install
+npm run compile
+# Press F5 in VS Code to launch extension development host
+```
+
+**Backend Setup**:
+```bash
+python -m venv venv
+# Activation (Windows)
+venv\Scripts\activate
 # Activation (Unix/macOS)
 source venv/bin/activate
 
-# Activation (Windows)
-venv\Scripts\activate
-
-# Dependency installation
-pip install -r requirements.txt
+# Install dependencies for optional components
+pip install watchdog rich
 ```
 
 ### Project Structure
 ```
 watchdog/
+├── vscode-extension/              # VS Code extension
+│   ├── src/
+│   │   ├── extension.ts           # Main extension entry
+│   │   ├── inlineCompletionProvider.ts  # Completion provider
+│   │   ├── backendManager.ts      # Backend process management
+│   │   └── httpClient.ts          # Backend communication
+│   ├── package.json               # Extension manifest
+│   └── tsconfig.json              # TypeScript configuration
 ├── src/
-│   ├── __init__.py                 # Package marker
-│   ├── file_watcher.py            # 145 lines: Event detection
-│   ├── code_analyzer.py           # 250 lines: AST analysis
-│   ├── hint_engine.py             # 393 lines: Hint generation
-│   ├── state_manager.py           # 152 lines: Session tracking
-│   └── vscode_integration.py      # 114 lines: Terminal UI
-├── hints/
-│   └── patterns.json              # Custom hint templates (future)
-├── tests/
-│   └── test_hint_engine.py        # Unit tests (future)
-├── examples/
-│   └── practice.py                # Example practice file
+│   ├── llm/
+│   │   └── hint_service.py        # LLM-powered hint generation
+│   └── effects.py                 # Effects pattern (Success/Failure)
+├── watch_and_hint.py              # Optional terminal file monitor
 ├── project_configs/
 │   ├── engineering-standards.md   # Development standards
 │   ├── session-start-checklist.md # Quality gates
@@ -204,127 +166,121 @@ watchdog/
 │   ├── tech-context.md            # This file
 │   ├── progress.md                # Milestone tracking
 │   └── active-context.md          # Current development state
-├── main.py                        # 90 lines: Application entry
-├── outline.md                     # Complete implementation spec
-├── requirements.txt               # Dependencies
-├── setup.py                       # Package configuration
-└── README.md                      # User documentation
+└── tests/                         # Unit tests (future)
 ```
 
 ## Data Architecture
 
-### State Management Schema
+### Request/Response Schema
 
-**LearningSession Dataclass**:
-```python
-@dataclass
-class LearningSession:
-    file_path: str                      # Monitored file path
-    started_at: datetime                # Session start timestamp
-    current_hint_level: int = 1         # Current hint progression (1-4)
-    hints_shown: List[str] = []         # History of displayed hints
-    time_on_current_task: float = 0     # Seconds since last code update
-    task_completed: bool = False        # Task completion flag
-```
-
-**CodeContext Dataclass**:
+**CodeContext Dataclass** (hint_service.py):
 ```python
 @dataclass
 class CodeContext:
-    surrounding_code: str               # Remaining code after deletion
-    missing_element: str                # Detected pattern type
-    expected_pattern: Optional[str]     # Specific keyword/pattern
-    difficulty_level: int               # 1-5 difficulty rating
+    file_path: str                      # Current file name
+    code_snippet: str                   # Full file content or context
+    change_type: str                    # 'help_comment', 'learning_hint', 'context_completion'
+    language: str = "python"            # Programming language
 ```
 
-**Hint Dataclass**:
-```python
-@dataclass
-class Hint:
-    level: int                          # 1-4 hint progression
-    content: str                        # Hint text/code
-    best_practice: Optional[str] = None # Related best practice tip
+**HintRequest** (VS Code extension):
+```typescript
+interface HintRequest {
+    file_path: string;                  // Document file name
+    code_snippet: string;               // JSON with full_code, current_line, etc.
+    change_type: string;                // Request type
+    language: string;                   // Programming language
+}
 ```
 
-### Session Storage
-**Storage**: In-memory (Python object)
-**Persistence**: None (session-scoped, resets on restart)
-**History**: Maintained in StateManager.sessions_history list
-**Retention**: Duration of application lifetime
+**HintResponse**:
+```typescript
+interface HintResponse {
+    success: boolean;                   // Request success status
+    hint: string;                       // Generated hint/suggestion
+    error?: string;                     // Error message if failed
+}
+```
+
+### State Management
+**Approach**: Stateless request/response model
+**Persistence**: None required - each request is independent
+**Context**: Full file content sent with each request
+**Caching**: Future enhancement for performance optimization
 
 ## Performance Specifications
 
 ### Latency Requirements
-- **File Change Detection**: <500ms from save to event handler
-- **AST Parsing**: <100ms for files up to 1000 lines
-- **Hint Generation**: <50ms for template lookup and formatting
-- **Terminal Display**: <100ms for rich panel rendering
-- **Total Responsiveness**: <1s from code save to hint display
+- **Inline Completion Trigger**: <100ms from typing to extension activation
+- **Backend Request**: <300ms for LLM hint generation
+- **Total User-Perceived Latency**: <500ms from typing to ghost text display
+- **Extension Startup**: <3s for activation and backend initialization
+- **Backend Startup**: <2s for Python service initialization
 
 ### Memory Footprint
-- **Base Application**: ~10-15MB (Python interpreter + imports)
-- **Per Watcher Instance**: ~5-10MB (observer thread + callbacks)
-- **Session State**: <1MB (session data + hint history)
-- **AST Parse Tree**: ~2-5MB for typical practice files
-- **Total Expected**: <50MB for normal usage
+- **VS Code Extension**: ~30-50MB (extension host + TypeScript runtime)
+- **Python Backend**: ~50-100MB (Python interpreter + LLM client)
+- **Per Request**: <1MB (code context + response)
+- **Total System**: ~100-150MB for active usage
 
 ### Scalability Considerations
-- **Single File Focus**: One file per application instance
-- **Multiple Instances**: Separate process per monitored file (if needed)
-- **Session History**: Grows with number of hints (acceptable for learning sessions)
-- **Pattern Templates**: Fixed size, loaded once at startup
+- **Concurrent Files**: Supports multiple open Python files simultaneously
+- **Stateless Backend**: Each request is independent, no session state
+- **Request Queuing**: Extension handles concurrent completion requests
+- **Backend Scaling**: Single backend instance serves all open files
 
 ## Integration Architecture
 
-### VS Code Terminal Integration
-**Method**: Standard output (stdout) with ANSI escape codes
-**Library**: rich Console for styled output
+### VS Code Extension Integration
+**Method**: VS Code Extension API with inline completion provider
+**Communication**: HTTP REST API between extension and Python backend
 **Features**:
-- Markdown rendering for code examples
-- Styled panels with borders and titles
-- Progress indicators and emoji icons
-- Color-coded hint levels
+- Inline completion item provider registration
+- Ghost text rendering at cursor position
+- Automatic backend process management
+- Configuration via VS Code settings
 
-**Terminal Requirements**:
-- ANSI color support
-- UTF-8 encoding for emoji
-- Minimum width: 80 characters for panel display
+**Extension Configuration**:
+```json
+{
+  "watchdog.backendPort": 5555,
+  "watchdog.enableDiagnostics": true
+}
+```
 
-### Future LLM Integration (Planned)
-**OpenAI Integration**:
-- Dynamic hint generation based on actual code context
-- Personalized explanations adapted to user skill level
-- Natural language understanding of deleted code intent
+### LLM Integration (Current)
+**Architecture**: Configurable LLM provider in Python backend
+**Features**:
+- Context-aware code generation
+- Natural language to code translation (help comments)
+- Pattern-based learning hints
+- Full-file context understanding
 
-**Anthropic Integration**:
-- Alternative LLM provider for hint generation
-- Claude-specific prompt engineering for educational content
-
-**Integration Pattern**:
-- Fallback chain: LLM → Templates → Generic hints
-- API key management via python-dotenv
-- Rate limiting and cost controls
-- Caching of LLM-generated hints
+**Integration Patterns**:
+- Stateless request/response model
+- Full code context passed with each request
+- Effects pattern for error handling (Success/Failure)
+- Extensible for multiple LLM providers
 
 ## Development Constraints
 
 ### Technical Limitations
-- Python AST limitations: Only valid Python syntax parsable
-- File system access: Requires read/write permissions on monitored file
-- Terminal dependency: Requires terminal access for rich output
-- Single file scope: Cannot monitor multiple files simultaneously per instance
+- **Python-only**: Currently supports Python files only (multi-language planned)
+- **VS Code dependency**: Requires VS Code to use inline completion features
+- **Backend requirement**: Needs Python backend running for hint generation
+- **Network dependency**: Extension-backend communication via HTTP (localhost)
 
 ### Best Practices Enforcement
-- Type hints for all function signatures
-- Docstrings for all public classes and methods
-- PEP 8 compliance for code style
-- Graceful error handling with try-except blocks
-- Meaningful variable names (no single-letter variables)
+- **Extension**: TypeScript with strict type checking enabled
+- **Backend**: Type hints, dataclasses, Effects pattern for error handling
+- **Code Quality**: PEP 8 compliance (Python), ESLint (TypeScript)
+- **Error Handling**: Effects pattern (Success/Failure) not exceptions
+- **Testing**: Unit tests for core hint generation logic (planned)
 
 ### Performance Constraints
-- Debounce delay: Minimum 0.5s between file change events
-- AST parsing: Limited to files <10,000 lines (practical limit)
-- Hint progression: Fixed 30s per level threshold
-- Memory: Session history unbounded (acceptable for learning sessions)
+- **Completion Latency**: Must complete within 500ms for good UX
+- **Context Size**: Full-file analysis limited by LLM context windows
+- **Concurrent Requests**: Backend processes requests sequentially
+- **Memory**: Stateless design prevents memory accumulation
 
-This technical context provides comprehensive foundation for Watchdog development with clear specifications for all major architectural components.
+This technical context provides comprehensive foundation for Watchdog as an inline code completion tool with clear specifications for all major architectural components.

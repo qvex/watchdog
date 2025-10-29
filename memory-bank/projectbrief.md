@@ -3,31 +3,33 @@
 ## Executive Summary
 
 **PROJECT NAME**: Watchdog
-**PROJECT TYPE**: Interactive Python Learning Assistant
-**OBJECTIVE**: Create an engaging learning tool that monitors Python files and provides progressive hints when learners delete code, facilitating hands-on practice and skill development
-**TIMELINE**: Initial template complete, ready for enhancement and LLM integration
+**PROJECT TYPE**: AI-Powered Code Completion Tool
+**OBJECTIVE**: Create an intelligent inline code completion assistant similar to GitHub Copilot that provides context-aware code suggestions and learning-focused hints for Python development in VS Code
+**TIMELINE**: VS Code extension complete with inline completion provider and Python backend
 
 ## Project Mission
 
 ### Core Problem Statement
-Beginning Python developers often struggle with learning by reading alone. They need hands-on practice with immediate, contextual feedback that guides them through the learning process without giving away answers too quickly. Traditional tutorials lack interactivity, while existing tools either provide no hints or complete solutions without progressive guidance.
+Beginning Python developers need intelligent, context-aware coding assistance that helps them learn while they code. Traditional code completion tools either provide no guidance or give complete solutions without educational value. Learners need a tool that understands their full codebase context and provides appropriate hints, patterns, and suggestions that facilitate learning without simply writing code for them.
 
 ### Primary Solution Approach
-Implementation of a file monitoring system that detects when learners delete code (indicating practice intent) and provides a 4-level progressive hint system:
-1. Conceptual hints (what to think about)
-2. Structural hints (what components are needed)
-3. Syntax hints (how to write it)
-4. Code examples (complete solution)
+Implementation of a VS Code extension with an inline completion provider that delivers context-aware code suggestions as ghost text while typing:
+1. Full-file context analysis to understand the codebase
+2. Inline ghost text suggestions that appear as you type
+3. Help comment feature (type `# help [description]`) for targeted code generation
+4. Learning-focused hints that show patterns and syntax rather than just complete solutions
+5. Smart context detection to only suggest when code is incomplete
 
-The system uses AST analysis to understand what was deleted and provides contextually appropriate hints with best practice suggestions.
+The system uses an LLM-powered Python backend to analyze code context and generate appropriate suggestions with best practice patterns.
 
 ## Business Context
 
 ### Target Use Cases
-- **Deliberate Practice**: Learners delete working code to practice rewriting it themselves
-- **Guided Learning**: Progressive hints prevent frustration while encouraging problem-solving
-- **Best Practice Integration**: Learn correct patterns and Pythonic idioms during practice
-- **VS Code Integration**: Seamless learning experience within familiar development environment
+- **Active Coding Assistance**: Real-time code suggestions as you type in VS Code
+- **Guided Learning**: Context-aware hints that teach patterns rather than just providing answers
+- **Help-on-Demand**: Type `# help [description]` to get targeted code generation for specific needs
+- **Best Practice Integration**: Learn correct patterns and Pythonic idioms through intelligent suggestions
+- **VS Code Integration**: Seamless inline completion experience similar to GitHub Copilot
 
 ### Key Stakeholders
 - **Python Learners**: Primary users seeking hands-on practice with guidance
@@ -38,35 +40,37 @@ The system uses AST analysis to understand what was deleted and provides context
 ## Technical Objectives
 
 ### Primary Technical Goals
-1. **Real-time File Monitoring**: Sub-second detection of code deletions using watchdog library
-2. **Intelligent Code Analysis**: AST-based pattern recognition for loops, functions, classes, etc.
-3. **Progressive Hint System**: 4-level hint escalation with time-based progression
-4. **VS Code Integration**: Rich terminal output with styled panels and progress indicators
-5. **Session Management**: Learning session tracking with history and analytics
+1. **Inline Completion Provider**: VS Code extension providing ghost text suggestions as you type
+2. **Full-Context Code Analysis**: LLM-powered understanding of entire file context, not just cursor area
+3. **Context-Aware Suggestions**: Smart detection of when to show hints vs. when code is complete
+4. **Help Comment System**: Special `# help` trigger for targeted code generation
+5. **Learning-Focused Hints**: Provide patterns and syntax guidance rather than complete solutions
 
 ### Architecture Components
-- **File Watcher** (src/file_watcher.py): Observer pattern for file change detection
-- **Code Analyzer** (src/code_analyzer.py): AST parsing and pattern recognition
-- **Hint Engine** (src/hint_engine.py): Progressive hint generation and best practices
-- **State Manager** (src/state_manager.py): Session tracking and progress monitoring
-- **VS Code Integration** (src/vscode_integration.py): Terminal UI with rich formatting
-- **Main Coordinator** (main.py): Application orchestration and CLI interface
+- **VS Code Extension** (vscode-extension/src/): TypeScript extension with inline completion provider
+  - extension.ts: Main extension activation and lifecycle
+  - inlineCompletionProvider.ts: Provides ghost text suggestions
+  - backendManager.ts: Manages Python backend process
+  - httpClient.ts: Communicates with Python backend
+- **Python Backend** (src/llm/): LLM-powered hint generation service
+  - hint_service.py: Processes code context and generates suggestions
+- **Optional File Monitor** (watch_and_hint.py): Standalone file watching for terminal-based hints
 
 ## Success Criteria
 
 ### Functional Requirements
-- **Deletion Detection**: Accurate identification of deleted lines and functions within 0.5s
-- **Pattern Recognition**: Support for loops, conditionals, functions, classes, comprehensions
-- **Hint Quality**: Contextually appropriate hints with increasing specificity across 4 levels
-- **Session Tracking**: Complete learning history with time tracking and completion status
-- **User Experience**: Clear, encouraging feedback through rich terminal formatting
+- **Inline Completion**: Real-time ghost text suggestions as user types in VS Code
+- **Context Understanding**: Full-file analysis to understand code structure and intent
+- **Help Comments**: `# help [description]` triggers targeted code generation
+- **Smart Filtering**: Only show suggestions when code is incomplete or explicitly requested
+- **User Experience**: Non-intrusive ghost text without squiggly lines or hover delays
 
 ### Performance Benchmarks
-- **File Watch Latency**: <0.5s from file save to change detection
-- **AST Analysis**: <100ms for typical Python files (<1000 lines)
-- **Hint Generation**: <50ms for template-based hints
-- **Memory Footprint**: <50MB for typical learning session
-- **Startup Time**: <2s from command execution to ready state
+- **Completion Latency**: <500ms from typing to ghost text appearance
+- **Backend Response**: <300ms for LLM-based hint generation
+- **Context Analysis**: Full-file analysis completed within completion latency budget
+- **Memory Footprint**: <100MB for VS Code extension + Python backend
+- **Startup Time**: <3s for extension activation and backend initialization
 
 ### Quality Standards
 - **Code Quality**: Type hints, docstrings, PEP 8 compliance
@@ -133,11 +137,11 @@ The system uses AST analysis to understand what was deleted and provides context
 ## Expected Outcomes
 
 ### Immediate Deliverables
-- **Functional Learning Assistant**: Complete watchdog-based file monitoring system
-- **Progressive Hint System**: 4-level hints for loops, functions, conditionals
-- **VS Code Integration**: Rich terminal output with styled panels
-- **Session Tracking**: Learning history and progress monitoring
-- **Example Practice File**: Working example demonstrating all features
+- **VS Code Extension**: Fully functional inline completion provider for Python
+- **Context-Aware Suggestions**: LLM-powered code completion with full-file understanding
+- **Help Comment System**: `# help` feature for targeted code generation
+- **Smart Context Detection**: Only suggests when code is incomplete
+- **Python Backend**: LLM service with hint generation capabilities
 
 ### Long-term Benefits
 - **Enhanced Learning Outcomes**: Faster skill acquisition through deliberate practice
@@ -148,22 +152,22 @@ The system uses AST analysis to understand what was deleted and provides context
 
 ## Future Enhancement Roadmap
 
-### Phase 3: LLM Integration (Planned)
-- Dynamic hint generation based on actual code context
+### Phase 2: Enhanced LLM Features (Planned)
+- Multiple LLM provider support (OpenAI, Anthropic, local models)
 - Personalized learning paths adapted to user skill level
-- Natural language explanations of code patterns
-- Adaptive difficulty based on user performance
+- Natural language explanations for suggested code
+- User preference learning and adaptation
 
-### Phase 4: Extensibility Features (Planned)
-- Custom hint pattern system (hints/patterns.json)
-- Topic-specific learning modules (web dev, data science, algorithms)
-- Exercise generation from existing codebases
-- Hint pattern sharing marketplace
+### Phase 3: Multi-Language Support (Planned)
+- JavaScript/TypeScript support
+- Other popular languages (Go, Rust, Java)
+- Language-specific best practices
+- Cross-language pattern recognition
 
-### Phase 5: Analytics Dashboard (Planned)
-- Learning progress visualization
-- Session history and metrics
-- Achievement system and badges
-- Skill gap identification
+### Phase 4: Advanced Features (Planned)
+- Code refactoring suggestions
+- Bug detection and fixes
+- Test generation assistance
+- Documentation generation
 
 This project brief establishes the comprehensive foundation for the Watchdog learning assistant with clear objectives, constraints, and success criteria for all stakeholders.

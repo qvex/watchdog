@@ -2,100 +2,91 @@
 
 ## Current Development Phase
 
-**ACTIVE PHASE**: Project Initialization - Template Complete
-**PRIMARY FOCUS**: Documentation system setup and configuration
-**CURRENT STATUS**: Template implementation complete from outline.md
-**CURRENT VERSION**: v0.1.0 (Initial Template)
-**NEXT PHASE**: Testing and Validation
+**ACTIVE PHASE**: VS Code Extension Complete
+**PRIMARY FOCUS**: Inline code completion with LLM-powered hints
+**CURRENT STATUS**: Functional VS Code extension with Python backend
+**CURRENT VERSION**: v0.2.0 (Extension Complete)
+**NEXT PHASE**: Enhanced LLM features and multi-language support
 
 ## Project Overview
 
 **PROJECT**: Watchdog
-**ARCHITECTURE**: File monitoring system with progressive hint generation
-**OBJECTIVE**: Interactive Python learning assistant that provides contextual hints when learners delete code
+**ARCHITECTURE**: VS Code extension with inline completion provider + Python LLM backend
+**OBJECTIVE**: AI-powered code completion tool similar to GitHub Copilot, providing context-aware suggestions and learning-focused hints
 
 ## Current Implementation Context
 
-### System Architecture (Template Complete)
+### System Architecture (Production Complete)
 
-**Core Components** (all specified in outline.md):
-1. **File Watcher** (src/file_watcher.py) - Observer pattern for file change detection
-2. **Code Analyzer** (src/code_analyzer.py) - AST-based pattern recognition
-3. **Hint Engine** (src/hint_engine.py) - Progressive 4-level hint system
-4. **State Manager** (src/state_manager.py) - Session tracking and history
-5. **VS Code Integration** (src/vscode_integration.py) - Rich terminal output
-6. **Main Coordinator** (main.py) - Application orchestration
+**Core Components**:
+1. **VS Code Extension** (vscode-extension/src/) - TypeScript inline completion provider
+   - extension.ts - Main extension lifecycle
+   - inlineCompletionProvider.ts - Ghost text suggestions
+   - backendManager.ts - Backend process management
+   - httpClient.ts - Backend communication
+2. **Python Backend** (src/llm/) - LLM-powered hint generation
+   - hint_service.py - Context analysis and code generation
+3. **Optional File Monitor** (watch_and_hint.py) - Terminal-based code monitoring
 
 ### Technical Stack
-- **Runtime**: Python 3.8+
-- **File Monitoring**: watchdog 3.0.0
-- **Terminal UI**: rich 13.7.0
-- **Code Analysis**: Built-in ast and difflib modules
-- **Future LLM Integration**: OpenAI 1.3.0, Anthropic 0.7.0 (planned)
+- **Extension**: TypeScript + VS Code Extension API
+- **Backend**: Python 3.8+ with LLM integration
+- **Communication**: HTTP REST API (localhost)
+- **Optional Tools**: watchdog 3.0.0 (file monitoring), rich 13.7.0 (terminal UI)
 
-## Current Development Status (v0.1.0)
+## Current Development Status (v0.2.0)
 
-### Template Implementation Status
+### Production Implementation Status
 
-#### Phase 1: Architecture and Code Specification (COMPLETE)
-- ✅ **Complete System Design**: All 6 components architected
-- ✅ **Implementation Code Provided**: 702 lines in outline.md
-- ✅ **Project Structure Defined**: Directory layout and file organization
-- ✅ **Dependency Selection**: requirements.txt created
-- ✅ **Documentation System**: Memory bank and config files established
+#### VS Code Extension (COMPLETE)
+- ✅ **Inline Completion Provider**: Ghost text suggestions as you type
+- ✅ **Backend Integration**: HTTP communication with Python service
+- ✅ **Automatic Backend Management**: Starts/stops backend automatically
+- ✅ **Context Detection**: Smart filtering for when to show suggestions
+- ✅ **Help Comments**: `# help ...` trigger for code generation
 
 #### Component Status
 
-**1. File Watcher (COMPLETE - Template)**
-- CodeChangeEvent dataclass with before/after tracking
-- PythonFileWatcher with Observer pattern
-- Debounce mechanism (0.5s)
-- Deleted line and function detection
-- Callback-based event notification
+**1. VS Code Extension (COMPLETE - Production)**
+- extension.ts: Main activation and lifecycle management
+- inlineCompletionProvider.ts: Provides ghost text inline completions
+- backendManager.ts: Manages Python backend process lifecycle
+- httpClient.ts: HTTP REST API communication with backend
+- Configuration: backendPort (5555), enableDiagnostics settings
 
-**2. Code Analyzer (COMPLETE - Template)**
-- CodeContext dataclass for analysis results
-- Pattern detection for 7 types: loops, conditionals, functions, classes, comprehensions, context managers, error handling
-- Difficulty estimation (1-5 scale)
-- Graceful SyntaxError handling
+**Key Features**:
+- Inline completion registration for Python files
+- Full-file context sent with each request
+- Help comment detection (`# help ...`)
+- Smart context filtering (no suggestions if text after cursor or return/pass exists)
+- Automatic markdown stripping from LLM responses
+- Help comments insert on new line below comment
 
-**3. Hint Engine (COMPLETE - Template)**
-- Hint dataclass with level, content, best_practice
-- 4-level progressive system:
-  - Level 1: Conceptual (🤔)
-  - Level 2: Structural (💡)
-  - Level 3: Syntax (✏️)
-  - Level 4: Code example (📝)
-- Best practice integration
-- Time-based progression (30s per level)
+**2. Python LLM Backend (COMPLETE - Production)**
+- hint_service.py: LLM-powered code analysis and generation
+- CodeContext dataclass: file_path, code_snippet, change_type, language
+- generate_code_hint(): Main hint generation function
+- Effects pattern: Success/Failure for error handling
 
-**4. State Manager (COMPLETE - Template)**
-- LearningSession dataclass
-- Session lifecycle management
-- Hint history tracking
-- Time tracking for progression
-- Completion status marking
+**Hint Generation Modes**:
+- `help_comment`: Code generation from natural language description
+- `learning_hint`: Next logical code step with patterns (not full solution)
+- `context_completion`: Context-aware code continuation suggestions
 
-**5. VS Code Integration (COMPLETE - Template)**
-- Rich console output
-- Styled panels with borders
-- Emoji indicators per hint level
-- Progress display
-- Encouragement messages
-
-**6. Main Application (COMPLETE - Template)**
-- PythonLearningBot coordinator
-- Component initialization
-- Event handling pipeline
-- CLI interface (argparse)
-- Graceful shutdown (Ctrl+C)
+**3. Optional File Monitor (COMPLETE - Production)**
+- watch_and_hint.py: Standalone terminal-based file monitoring
+- CodeHintHandler: Watches Python files for modifications
+- Extracts last 50 lines on file change
+- Sends to hint service and displays in terminal
+- Code normalization to prevent duplicate processing
 
 ## Critical Files and References
 
 ### Primary Documentation
-- **outline.md**: Single source of truth - contains all implementation code
-- **requirements.txt**: Dependency specifications
-- **README.md**: User-facing documentation (to be created)
+- **vscode-extension/package.json**: Extension manifest and configuration
+- **vscode-extension/src/**: TypeScript source code for extension
+- **src/llm/hint_service.py**: Python backend hint generation
+- **project_configs/dev-log.md**: Development history and batches
 
 ### Configuration System
 - **project_configs/engineering-standards.md**: Development standards
@@ -110,135 +101,137 @@
 
 ## Implementation Details
 
-### File Watcher Implementation
+### Inline Completion Provider Implementation
 **Key Features**:
-- Monitors single Python file for modifications
-- Detects code deletions via difflib.unified_diff
-- Identifies deleted functions via AST comparison
-- Debounce prevents rapid-fire events (0.5s delay)
-- Callback-based architecture for extensibility
+- Registers inline completion provider for Python files
+- Triggers on typing (provideInlineCompletionItems called by VS Code)
+- Sends full document context to backend with each request
+- Smart filtering: no suggestions if text after cursor
+- Help comment detection: `# help ...` triggers code generation
+- Pattern vs. solution mode based on change_type
+
+**Request Flow**:
+1. User types in Python file
+2. Extension checks context (cursor position, line content, etc.)
+3. If appropriate, sends HintRequest to backend
+4. Backend analyzes full code and generates suggestion
+5. Extension displays as ghost text at cursor
 
 **Performance**:
-- File change detection: <500ms
-- AST parsing: ~50-100ms for typical files
-- Memory overhead: ~5-10MB per watcher
+- Extension processing: <100ms
+- Backend request: <300ms
+- Total latency: <500ms
 
-### Code Analyzer Implementation
-**Supported Patterns**:
-```python
-patterns = {
-    'loops': ['for', 'while'],
-    'conditionals': ['if', 'elif', 'else'],
-    'functions': ['def'],
-    'classes': ['class'],
-    'comprehensions': ['[', 'for', 'in'],
-    'context_managers': ['with'],
-    'error_handling': ['try', 'except', 'finally']
+### Backend Hint Generation Implementation
+**Hint Generation Modes**:
+- **help_comment**: Natural language to code (e.g., "# help write a function to add two numbers")
+- **learning_hint**: Next logical step with patterns, not complete solution
+- **context_completion**: Suggests next 1-3 lines based on context
+
+**Context Sent to Backend**:
+```json
+{
+  "full_code": "[entire file content]",
+  "current_line": "[line where cursor is]",
+  "text_before_cursor": "[text before cursor on current line]",
+  "line_number": 42,
+  "is_empty_line": false,
+  "change_type": "learning_hint"
 }
 ```
 
-**Difficulty Levels**:
-- loops: 2/5
-- conditionals: 2/5
-- functions: 3/5
-- comprehensions: 4/5
-- classes: 4/5
-- error_handling: 3/5
-
-### Hint Engine Implementation
-**Hint Progression Strategy**:
-- Start at level 1 (conceptual) when deletion detected
-- Escalate every 30 seconds if learner stuck
-- Maximum level 4 (complete code example)
-- Random selection from template pool for variety
-
-**Best Practices Integrated**:
-- Loops: Use enumerate(), list comprehensions, don't modify while iterating
-- Functions: Descriptive names, single responsibility, docstrings, type hints
-- Conditionals: elif vs multiple if, ternary operators, early returns
+**LLM Prompting Strategy**:
+- help_comment: Generate 2-8 lines of code from description
+- learning_hint: Provide single-line hint for next step
+- Markdown stripping: Removes ```python code blocks
+- Error detection: Identifies syntax errors and suggests fixes
 
 ## Next Steps and Priorities
 
 ### Immediate Next Steps (Priority 1)
 
-**Environment Setup**:
-1. Create virtual environment: `python -m venv venv`
-2. Activate environment: `venv\Scripts\activate` (Windows) or `source venv/bin/activate` (Unix)
-3. Install dependencies: `pip install -r requirements.txt`
-4. Verify imports: Test all imports from outline.md
+**Testing and Refinement**:
+1. Test inline completions with various Python code patterns
+2. Measure and optimize completion latency
+3. Test help comment feature with different descriptions
+4. Verify smart context detection edge cases
+5. Test backend error handling and recovery
 
-**Testing Preparation**:
-1. Create src/ directory structure
-2. Extract code from outline.md into separate files
-3. Create examples/practice.py test file
-4. Verify main.py runs without errors
+**User Experience**:
+1. Fine-tune when suggestions appear vs. don't appear
+2. Improve learning hint quality (patterns vs. solutions)
+3. Test with real users for feedback
+4. Add user configuration options
 
 ### Short-term Goals (Priority 2)
 
-**Component Testing**:
-1. Test file_watcher.py with file modifications
-2. Test code_analyzer.py pattern recognition
-3. Test hint_engine.py hint generation
-4. Test state_manager.py session tracking
-5. Test vscode_integration.py terminal output
+**Enhanced LLM Features** (v0.3.0 - Planned):
+- Multiple LLM provider support (OpenAI, Anthropic, local models)
+- Personalized learning paths based on user patterns
+- Natural language explanations for suggested code
+- User preference learning and adaptation
 
-**Integration Testing**:
-1. End-to-end test: Delete code → Receive hints
-2. Measure latency (target: <1s total)
-3. Test hint progression timing (30s escalation)
-4. Verify terminal formatting in VS Code
+**Performance Optimization**:
+1. Response caching for common patterns
+2. Reduce completion latency to <300ms total
+3. Optimize full-file context analysis
+4. Add request queuing and prioritization
 
 ### Long-term Goals (Priority 3)
 
-**LLM Integration** (v0.3.0 - Planned):
-- OpenAI API integration for dynamic hints
-- Anthropic Claude integration as alternative
-- Prompt engineering for educational content
-- Fallback chain: LLM → Templates → Generic
+**Multi-Language Support** (v0.4.0 - Planned):
+- JavaScript/TypeScript inline completions
+- Support for Go, Rust, Java
+- Language-specific best practices
+- Cross-language pattern recognition
 
-**Extensibility Features** (v0.4.0 - Planned):
-- Custom hint pattern system (hints/patterns.json)
-- Topic-specific learning modules
-- Exercise generation
-- Progress analytics dashboard
+**Advanced Features** (v0.5.0 - Planned):
+- Code refactoring suggestions
+- Bug detection and fix suggestions
+- Test generation assistance
+- Documentation generation
 
 ## Known Limitations and Considerations
 
 ### Current Limitations
-1. **Single File Scope**: Can only monitor one file per application instance
-2. **Template-Based Hints**: Not context-aware, uses pre-defined templates
-3. **No Persistence**: Session data lost on restart
-4. **Local Only**: Cannot monitor network drives or remote files
+1. **Python-Only**: Currently only supports Python files (multi-language planned)
+2. **VS Code Dependency**: Requires VS Code to use extension features
+3. **Backend Requirement**: Python backend must be running for suggestions
+4. **Completion Latency**: 300-500ms may feel slow compared to local completions
+5. **No Caching**: Each request analyzed independently (no learning/caching yet)
 
 ### Design Decisions
-1. **In-Memory State**: Acceptable for learning sessions (typically <1 hour)
-2. **Debounce Delay**: 0.5s prevents spam but still feels responsive
-3. **30s Hint Escalation**: Balances guidance with allowing struggle time
-4. **4 Hint Levels**: Enough granularity without overwhelming learner
+1. **Stateless Backend**: Each request independent, full context sent each time
+2. **HTTP Communication**: Simple REST API between extension and backend
+3. **Smart Filtering**: Only suggest when code incomplete (no text after cursor)
+4. **Learning Mode**: Prioritize hints/patterns over complete solutions
+5. **Help Comments**: Explicit trigger (`# help`) for code generation
 
-### Edge Cases to Test
-1. **Malformed Code**: Syntax errors should not crash analyzer
-2. **Empty Files**: Should handle gracefully
-3. **Rapid Edits**: Debounce should prevent event spam
-4. **Large Files**: AST parsing might be slow (>10,000 lines)
+### Edge Cases Handled
+1. **Text After Cursor**: No suggestions if user in middle of line
+2. **Complete Code**: No suggestions if return/pass already exists
+3. **Help Comment Placement**: Inserts on new line below comment
+4. **Markdown Stripping**: Removes ```python blocks from LLM responses
+5. **Backend Failures**: Graceful error handling, logs to output channel
 
 ## Development Workflow
 
-**Current Workflow**: Template review and documentation setup
-**Next Workflow**: Testing and validation
-**Future Workflow**: Enhancement and LLM integration
+**Current Workflow**: Production extension with LLM-powered backend
+**Next Workflow**: Enhanced features and multi-language support
+**Future Workflow**: Advanced refactoring and bug detection
 
 **Quality Standards**:
-- Type hints for all function signatures
-- Docstrings for all public APIs
-- PEP 8 compliance
-- Graceful error handling
-- Meaningful variable names
+- TypeScript strict mode for extension
+- Type hints for all Python functions
+- Effects pattern for error handling (Success/Failure)
+- PEP 8 compliance (Python), ESLint (TypeScript)
+- Comprehensive error logging
 
 **Testing Strategy**:
-- Unit tests for core components (planned)
-- Integration tests for end-to-end flow (planned)
-- Performance benchmarking (planned)
-- User testing with real learners (future)
+- Manual testing with various Python patterns (current)
+- Unit tests for hint generation logic (planned)
+- Integration tests for extension-backend communication (planned)
+- Performance benchmarking and optimization (planned)
+- User testing for UX refinement (future)
 
-This active context reflects v0.1.0 development state with template implementation complete and ready for testing phase.
+This active context reflects v0.2.0 development state with VS Code extension complete and operational inline code completion similar to GitHub Copilot.

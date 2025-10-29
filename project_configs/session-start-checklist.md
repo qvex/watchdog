@@ -14,11 +14,11 @@ Confirm understanding of absolute priorities:
 - PRIORITY 3: Error handling - Robust error handling with graceful degradation
 
 ### 3. Project Context Verification
-- Interactive Python learning assistant with file monitoring
-- Real-time hint generation based on code deletion detection
-- Progressive hint system (4 levels: conceptual → structural → syntax → code)
-- VS Code terminal integration for hint display
-- Learning session tracking and progress monitoring
+- AI-powered code completion tool similar to GitHub Copilot
+- Inline ghost text suggestions as you type in VS Code
+- Context-aware hints based on full-file analysis
+- Help comment feature (`# help ...`) for targeted code generation
+- Learning-focused hints that teach patterns rather than just providing solutions
 
 ### 4. Current Configuration Status Check
 ```python
@@ -34,29 +34,29 @@ for dir_name in required_dirs:
 
 ### 5. Development Phase Identification
 Review current implementation phase:
-- Phase 1: Core file watching system - COMPLETE
-- Phase 2: Code analysis and AST parsing - COMPLETE
-- Phase 3: Hint engine with progressive levels - COMPLETE
-- Phase 4: State management and session tracking - COMPLETE
-- Phase 5: VS Code terminal UI integration - COMPLETE
-- Phase 6: LLM integration (OpenAI/Anthropic) - PLANNED
+- Phase 1: VS Code extension with inline completion provider - COMPLETE
+- Phase 2: Python LLM backend for hint generation - COMPLETE
+- Phase 3: Context-aware suggestions and smart filtering - COMPLETE
+- Phase 4: Help comment system - COMPLETE
+- Phase 5: Optional terminal file monitor - COMPLETE
+- Phase 6: Enhanced LLM features and multi-language support - PLANNED
 
 ## Session Continuation Protocol
 
 ### For New Sessions
-1. Reference engineering-standards.md
-2. Review outline.md for complete system architecture
-3. Check dev-log.md for recent changes and context
-4. Verify virtual environment is activated
-5. Test file watcher on example practice file
+1. Reference engineering-standards.md for development standards
+2. Review dev-log.md (last 200 lines) for recent changes and context
+3. Understand VS Code extension + Python backend architecture
+4. Check extension manifest (vscode-extension/package.json)
+5. Review hint service implementation (src/llm/hint_service.py)
 
 ### For Continued Sessions
 1. Maintain established code quality standards
-2. Apply clear, descriptive naming conventions
-3. Use docstrings for public APIs
-4. Follow Python best practices (PEP 8)
+2. TypeScript strict mode for extension code
+3. Effects pattern (Success/Failure) for Python backend
+4. Follow Python best practices (PEP 8) and TypeScript/ESLint standards
 5. Update dev-log.md after significant progress
-6. Test changes with examples/practice.py
+6. Test inline completions in VS Code with Python files
 
 ## Pre-Implementation Validation Protocol
 
@@ -98,31 +98,31 @@ Review current implementation phase:
 - [ ] Confidence level is 10/10
 
 ### During Development
-- [ ] Type hints for all public functions
-- [ ] Docstrings for all public classes and functions
-- [ ] Watchdog event handlers implemented correctly
-- [ ] AST parsing handles syntax errors gracefully
-- [ ] Hint progression logic tested with edge cases
-- [ ] Rich terminal output formatted properly
+- [ ] TypeScript strict mode enabled for extension
+- [ ] Type hints for all Python backend functions
+- [ ] VS Code extension API used correctly
+- [ ] HTTP communication handles timeouts and errors
+- [ ] Backend startup/shutdown managed properly
+- [ ] Inline completion filtering logic correct
 
 ### After Code Generation
-- [ ] Docstrings present for all public APIs
+- [ ] Extension compiles without TypeScript errors
+- [ ] Backend processes requests without errors
 - [ ] Type hints present and accurate
-- [ ] Descriptive naming verified (no generic names like 'data', 'temp')
-- [ ] Python best practices followed
-- [ ] Performance tested with file watch operations
-- [ ] Error handling covers edge cases
-- [ ] Examples/practice.py works as expected
+- [ ] Descriptive naming verified (no generic names)
+- [ ] Effects pattern used for error handling (Success/Failure)
+- [ ] Inline completions appear correctly in VS Code
+- [ ] Help comments trigger code generation properly
 
 ## Red Flag Detection
 
 **Auto-reject if ANY of these are present:**
-- Missing docstrings on public classes/functions
+- Missing type hints on public functions (TypeScript or Python)
+- Try-catch error handling instead of Effects pattern in Python backend
 - Bare except clauses without proper error handling
 - Magic numbers without explanation
 - Generic variable names (x, temp, data)
-- Missing type hints on public functions
-- Hardcoded file paths without Path objects
-- Blocking operations in file event handlers
+- Hardcoded ports or paths without configuration
+- Blocking operations in VS Code extension main thread
 
 This checklist ensures consistent code quality and adherence to critical priorities across all development sessions regardless of conversation state or Claude restarts.
